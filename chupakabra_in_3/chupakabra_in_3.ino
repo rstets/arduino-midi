@@ -5,7 +5,7 @@
 #include "midi_helpers.h"
 
 // Adjust analog in readings
-#define REDUCE_NOISE B11111111 // 0xFF
+#define REDUCE_NOISE B11111100 // 0xFF
 
 // Analog in labels
 #define IN_BOTTOM_LEFT 0
@@ -65,15 +65,15 @@ void loop() {
     in[i] = ((analogRead(INPUTS[i]) & REDUCE_NOISE + ADD[i]) << ADJUST[i]); 
   }
 
-  values[VALUE_TOP] = (in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]) > 1;
+  values[VALUE_TOP] = (in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]) >> 1;
   values[VALUE_TOP_LEFT] = in[IN_TOP_LEFT];
-  values[VALUE_LEFT] = (in[IN_BOTTOM_LEFT] + in[IN_TOP_LEFT]) > 1;
+  values[VALUE_LEFT] = (in[IN_BOTTOM_LEFT] + in[IN_TOP_LEFT]) >> 1;
   values[VALUE_BOTTOM_LEFT] = in[IN_BOTTOM_LEFT];
-  values[VALUE_BOTTOM] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT]) > 1;
+  values[VALUE_BOTTOM] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT]) >> 1;
   values[VALUE_BOTTOM_RIGHT] = in[IN_BOTTOM_RIGHT];
-  values[VALUE_RIGHT] = (in[IN_TOP_RIGHT] + in[IN_BOTTOM_RIGHT]) > 1;
+  values[VALUE_RIGHT] = (in[IN_TOP_RIGHT] + in[IN_BOTTOM_RIGHT]) >> 1;
   values[VALUE_TOP_RIGHT] = in[IN_TOP_RIGHT];
-  values[VALUE_ALL] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT] + in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]) > 2;
+  values[VALUE_ALL] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT] + in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]) >> 2;
   /*
   OK. A bit of analysis now.
   1) We have 4 photo sensors that go like this:
@@ -98,18 +98,18 @@ void loop() {
       max_value = value;
       hand_position = v;
     }
-    if (DEBUG) {
-      Serial.print("Value at: ");
+    if (DEBUG && value > 0) {
       Serial.print(v);
       Serial.print("=");
       Serial.print(value);
+      Serial.print(",");
     }
   }
   byte pitch[NUM_SYNTHS] = {notes[hand_position]};
   byte velocity[NUM_SYNTHS] = {127};
   
   // TODO: Test it.
-  if (DEBUG == 1) {
+  if (DEBUG && max_value > 0) {
     Serial.println("------");
     Serial.print("Hand at: ");
     Serial.print(hand_position);
@@ -120,7 +120,7 @@ void loop() {
 
   // Play synths
   for (byte i = 0; i < NUM_SYNTHS; i++) {
-    playSynth(i, pitch[i], velocity[i]);
+    //playSynth(i, pitch[i], velocity[i]);
   }
   
   // Wait
