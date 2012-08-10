@@ -98,12 +98,19 @@ void loop() {
       max_value = value;
       hand_position = v;
     }
+    if (DEBUG) {
+      Serial.print("Value at: ");
+      Serial.print(v);
+      Serial.print("=");
+      Serial.print(value);
+    }
   }
   byte pitch[NUM_SYNTHS] = {notes[hand_position]};
   byte velocity[NUM_SYNTHS] = {127};
   
   // TODO: Test it.
   if (DEBUG == 1) {
+    Serial.println("------");
     Serial.print("Hand at: ");
     Serial.print(hand_position);
     Serial.print(", Max value: ");
