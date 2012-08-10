@@ -1,23 +1,23 @@
 #include "midi_helpers.h"
 
 // Constants
-const byte NOTE_ON = B10010000;
-const byte NOTE_OFF = B10000000;
-const byte CC = B10110000;
+const int NOTE_ON = B10010000;
+const int NOTE_OFF = B10000000;
+const int CC = B10110000;
 
 // MIDI "constants"
-byte MIDI_CH[NUM_SYNTHS];
-byte OCTAVE[NUM_SYNTHS];
+int MIDI_CH[NUM_SYNTHS];
+int OCTAVE[NUM_SYNTHS];
 
 // Cache currently playing MIDI note
-byte note_on[NUM_SYNTHS];
+int note_on[NUM_SYNTHS];
 
 
-void midiSetup(byte octave_start, byte octave_step) {
+void midiSetup(int octave_start, int octave_step) {
   // Initialize MIDI "constants"
-  byte midi_channel = 0;
-  byte octave = 12;
-  for (byte i = octave_start; i < NUM_SYNTHS; i++) {
+  int midi_channel = 0;
+  int octave = 12;
+  for (int i = octave_start; i < NUM_SYNTHS; i++) {
     note_on[i] = 0;
     MIDI_CH[i] = midi_channel;
     midi_channel++;
@@ -27,7 +27,7 @@ void midiSetup(byte octave_start, byte octave_step) {
   }
 }
 
-void sendMidiMessage(byte cmd, byte pitch, byte velocity) {
+void sendMidiMessage(int cmd, int pitch, int velocity) {
   if (DEBUG == 0) {
     Serial.write(cmd);
     Serial.write(pitch);
@@ -35,7 +35,7 @@ void sendMidiMessage(byte cmd, byte pitch, byte velocity) {
   }
 }
 
-void playSynth(byte i, byte note_in, byte velocity_in) {
+void playSynth(int i, int note_in, int velocity_in) {
   // Go
   if (note_on[i] == 0 && velocity_in > MIN_VELOCITY) {
     note_in += OCTAVE[i];

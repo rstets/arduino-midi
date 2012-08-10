@@ -5,7 +5,7 @@
 #include "Arduino.h"
 
 // Number if MIDI synths
-#define NUM_SYNTHS 1
+#define NUM_SYNTHS 2
 // MIDI baud rate
 #define MIDI_BAUD_RATE 31250
 // Extra velocity
@@ -16,8 +16,8 @@
 #define UPPER_LIMIT B01111111 // 0x7F
 
 // Interfaces
-void midiSetup(byte octave_start, byte octave_step);
-void sendMidiMessage(byte cmd, byte pitch, byte velocity);
-void playSynth(byte i, byte note, byte velocity);
+void midiSetup(int octave_start, int octave_step);
+void sendMidiMessage(int cmd, int pitch, int velocity);
+void playSynth(int i, int note, int velocity);
 
 #endif
