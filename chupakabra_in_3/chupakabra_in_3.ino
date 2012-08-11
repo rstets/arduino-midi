@@ -7,24 +7,27 @@
 // Adjust analog in readings
 #define REDUCE_NOISE B11111100
 
-// Analog in labels
+// Analog in numbers
 #define IN_BOTTOM_LEFT 0
 #define IN_TOP_LEFT 1
 #define IN_BOTTOM_RIGHT 2
 #define IN_TOP_RIGHT 3
 
-// Value labels
-#define VALUE_S_TOP 0
-#define VALUE_S_RIGHT 1
-#define VALUE_S_BOTTOM 2
-#define VALUE_S_LEFT 3
-
-#define VALUE_O_ALL 0
+// Diagonal values (equivalent to input numbers)
+#define VALUE_BOTTOM_LEFT 0
+#define VALUE_TOP_LEFT 1
+#define VALUE_BOTTOM_RIGHT 2
+#define VALUE_TOP_RIGHT 3
+// Horizontal-vertical values
+#define VALUE_TOP 4
+#define VALUE_RIGHT 5
+#define VALUE_BOTTOM 6
+#define VALUE_LEFT 7
 
 // Number of inputs
 #define NUM_INPUTS 4
 // Number of values
-#define NUM_S_VALUES 4
+#define NUM_VALUES 8
 
 // Runtime constants
 const int ADJUST[NUM_INPUTS] = {0, 0, 0, 0};
@@ -32,28 +35,24 @@ const int ADD[NUM_INPUTS] = {0, 0, 0, 0};
 const int INPUTS[NUM_INPUTS] = {A0, A1, A2, A3};
 
 // Delay
-int LOOP_DELAY = 250; // Max: 2^8
+int LOOP_DELAY = 250;
 
 // Analog in readings
 int in[NUM_INPUTS];
 // Calculated values
-int values[NUM_S_VALUES];
+int values[NUM_VALUES];
 // Notes
-const int notes_s[NUM_S_VALUES] = {12,15,18,21};
-const int notes_d[NUM_INPUTS] = {24,27,30,32};
+const int notes[NUM_VALUES] = {0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43};
 
-const String value_s_labels[NUM_S_VALUES] = {
-  "TOP",
-  "RIGHT",
-  "BOTTOM",
-  "LEFT"
-};
-
-const String input_labels[NUM_INPUTS] = {
+const String value_labels[NUM_VALUES] = {
   "BOTTOM_LEFT",
   "TOP_LEFT",
   "BOTTOM_RIGHT",
   "TOP_RIGHT",
+  "TOP",
+  "RIGHT",
+  "BOTTOM",
+  "LEFT"
 };
 
 // Setup routine
@@ -63,11 +62,10 @@ void setup() {
     LOOP_DELAY = 500;
   } else {
     Serial.begin(MIDI_BAUD_RATE);
+    int octave_step = 12;
+    int octave_start = 12;
+    midiSetup(octave_start, octave_step);
   }
-  
-  int octave_step = 12;
-  int octave_start = 12;
-  midiSetup(octave_start, octave_step);
 }
 
 // Main loop
@@ -77,72 +75,78 @@ void loop() {
     in[i] = ((analogRead(INPUTS[i]) & REDUCE_NOISE + ADD[i]) << ADJUST[i]); 
   }
 
-  values[VALUE_S_TOP] = (in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]);
-  values[VALUE_S_RIGHT] = (in[IN_TOP_RIGHT] + in[IN_BOTTOM_RIGHT]);
-  values[VALUE_S_BOTTOM] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT]);
-  values[VALUE_S_LEFT] = (in[IN_BOTTOM_LEFT] + in[IN_TOP_LEFT]);
+  values[VALUE_BOTTOM_LEFT] = in[IN_BOTTOM_LEFT];
+  values[VALUE_BOTTOM_RIGHT] = in[IN_BOTTOM_RIGHT];
+  values[VALUE_TOP_LEFT] = in[IN_TOP_LEFT];
+  values[VALUE_TOP_RIGHT] = in[IN_TOP_RIGHT];
 
-  int value_o = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT] + in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]);
+  values[VALUE_TOP] = (in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]);
+  values[VALUE_RIGHT] = (in[IN_TOP_RIGHT] + in[IN_BOTTOM_RIGHT]);
+  values[VALUE_BOTTOM] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT]);
+  values[VALUE_LEFT] = (in[IN_BOTTOM_LEFT] + in[IN_TOP_LEFT]);
+
+  int value_all = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT] + in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]);
   /*
   OK. A bit of analysis now.
-  1) We have 4 photo sensors that go like this:
+  - We have 4 photo sensors that go like this:
   * *
   * *
-  2) Photo sensors are noise and shitty etc, but I'll deal with that later.
-  3) The task is to get 9 values: Top, Top-right, Right, Bottom-right, so on and All. See constants above.
-  4) First thing is that we could compare sensor values and depending on that detect where the hand is.
-  5) That works find with angle values because they are equal to input values.
-  6) Not so good for top, bottom etc, as they are the sum of two neighbouring input values. I suppose we could divide those by 2.
-  7) As well as divide "All" by 4 (Bit shift right by 2. See above)
-  8) One thing that bothers me is calibration... but I'll deal with that later as well.
-  9) Now. The basic idea is ti produce 9 notes of the same velocity depending on where the hand is. For now.
-  10) One synth. Constant velocity. Constant rate. Different notes
+
+  - Let's say we have the greatest value at top-left input.
+  - And 0 at bottom-left
+  - The left value will be equal to the sum of those two
+  - Thus equal to top-left value
+  - In that case we are not sure which one is really active
+  - I suggest we have to prefer "top-left" before "left"
+  - Because if top-left and bottom-left are not zero the sum will be bigger than any of two
   */
-  int v = 0;
-  
-  int hand_position_s = 0;
-  int max_value_s = 0;
-  for (v = 0; v < NUM_S_VALUES; v++) {
+
+  // Detect maximum value and position
+  int hand_position = 0;
+  int max_value = 0;
+  for (int v = 0; v < NUM_VALUES; v++) {
     int value = values[v];
-    if (value > max_value_s) {
-      max_value_s = value;
-      hand_position_s = v;
+    if (value > max_value) {
+      max_value = value;
+      hand_position = v;
     }
   }
 
-  int hand_position_d = 0;
-  int max_value_d = 0;
-  for (v = 0; v < NUM_INPUTS; v++) {
-    int value = in[v];
-    if (value > max_value_d) {
-      max_value_d = value;
-      hand_position_d = v;
+  // Detect maximum input and position
+  int input_position = 0;
+  int max_input = 0;
+  for (int i = 0; i < NUM_INPUTS; i++) {
+    int input = in[i];
+    if (input > max_input) {
+      max_input = input;
+      input_position = i;
     }
   }
+  
+  // Value equals input means other of two inputs for value is zero.
+  if (max_value == max_input) {
+    max_value = max_input;
+    hand_position = input_position;
+  }
 
-  if (DEBUG && max_value_s > 0 && max_value_d > 0) {
+  if (DEBUG && max_value > 0) {
     Serial.println("------");
-    Serial.print(value_s_labels[hand_position_s]);
+    Serial.print(value_labels[hand_position]);
     Serial.print(":");
-    Serial.print(max_value_s);
-    Serial.print(" ");
-    Serial.print(input_labels[hand_position_d]);
-    Serial.print(":");
-    Serial.print(max_value_d);
+    Serial.print(max_value);
     Serial.print(" ");
     Serial.print("O:");
-    Serial.print(value_o);
+    Serial.print(value_all);
     Serial.println("\n");
   }
 
 
   // Play synths
 //  for (int i = 0; i < NUM_SYNTHS; i++) {
-    //playSynth(i, pitch[i], velocity[i]);
+//    playSynth(i, pitch[i], velocity[i]);
 //  }
   
   // Wait
   delay(LOOP_DELAY);
-//  delayMicroseconds(25);
 }
 
