@@ -41,6 +41,9 @@ int LOOP_DELAY = 250;
 int in[NUM_INPUTS];
 // Calculated values
 int values[NUM_VALUES];
+// Previous hand position
+int old_hand_position = 0;
+
 // Notes
 const int notes[NUM_VALUES] = {0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43};
 
@@ -60,12 +63,11 @@ void setup() {
   if (DEBUG > 0) {
     Serial.begin(9600); // DEBUG
     LOOP_DELAY = 500;
-  } else {
-    Serial.begin(MIDI_BAUD_RATE);
-    int octave_step = 12;
-    int octave_start = 12;
-    midiSetup(octave_start, octave_step);
   }
+
+  int octave_step = 12;
+  int octave_start = 12;
+  midiSetup(octave_start, octave_step);
 }
 
 // Main loop
@@ -85,7 +87,6 @@ void loop() {
   values[VALUE_BOTTOM] = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT]);
   values[VALUE_LEFT] = (in[IN_BOTTOM_LEFT] + in[IN_TOP_LEFT]);
 
-  int value_all = (in[IN_BOTTOM_LEFT] + in[IN_BOTTOM_RIGHT] + in[IN_TOP_LEFT] + in[IN_TOP_RIGHT]);
   /*
   OK. A bit of analysis now.
   - We have 4 photo sensors that go like this:
@@ -100,7 +101,7 @@ void loop() {
   - I suggest we have to prefer "top-left" before "left"
   - Because if top-left and bottom-left are not zero the sum will be bigger than any of two
   */
-
+  
   // Detect maximum value and position
   int hand_position = 0;
   int max_value = 0;
@@ -115,6 +116,7 @@ void loop() {
   // Detect maximum input and position
   int input_position = 0;
   int max_input = 0;
+
   for (int i = 0; i < NUM_INPUTS; i++) {
     int input = in[i];
     if (input > max_input) {
@@ -122,29 +124,34 @@ void loop() {
       input_position = i;
     }
   }
-  
+
   // Value equals input means other of two inputs for value is zero.
   if (max_value == max_input) {
     max_value = max_input;
     hand_position = input_position;
   }
 
-  if (DEBUG && max_value > 0) {
-    Serial.println("------");
-    Serial.print(value_labels[hand_position]);
-    Serial.print(":");
-    Serial.print(max_value);
-    Serial.print(" ");
-    Serial.print("O:");
-    Serial.print(value_all);
-    Serial.println("\n");
-  }
-
-
-  // Play synths
-//  for (int i = 0; i < NUM_SYNTHS; i++) {
-//    playSynth(i, pitch[i], velocity[i]);
+//  if (DEBUG > 0 && max_value > 0) {
+//    Serial.println("\n");
+//    Serial.print(value_labels[hand_position]);
 //  }
+
+  // Play
+  for (int i = 0; i < NUM_SYNTHS; i++) {
+    // No input
+    // Or hand moved
+    // Silence
+    if (max_value == 0 || old_hand_position != hand_position) {
+      noteOff(i);
+    }
+
+    // Some input
+    if (max_value > 0) {
+      // Play new note
+      noteOn(i, notes[hand_position], max_value << 2);
+      old_hand_position = hand_position;
+    } 
+  } 
   
   // Wait
   delay(LOOP_DELAY);

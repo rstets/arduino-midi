@@ -1,5 +1,14 @@
 #include "midi_helpers.h"
 
+// MIDI baud rate
+#define MIDI_BAUD_RATE 31250
+// Extra velocity
+#define ADD_VELOCITY 0
+// Minimal velocity
+#define MIN_VELOCITY 0
+// Upper value limit is 127
+#define UPPER_LIMIT 0x007F // 0x7F
+
 // Constants
 const int NOTE_ON = B10010000;
 const int NOTE_OFF = B10000000;
@@ -25,6 +34,12 @@ void midiSetup(int octave_start, int octave_step) {
     OCTAVE[i] = octave;
     octave += octave_step;
   }
+  
+  // If not debugging
+  if (DEBUG == 0) {
+    // Set up MIDI output
+    Serial.begin(MIDI_BAUD_RATE);
+  }    
 }
 
 void sendMidiMessage(int cmd, int pitch, int velocity) {
@@ -35,32 +50,38 @@ void sendMidiMessage(int cmd, int pitch, int velocity) {
   }
 }
 
-void playSynth(int i, int note_in, int velocity_in) {
+void noteOn(int i, int note_in, int velocity_in) {
   // Go
   if (note_on[i] == 0 && velocity_in > MIN_VELOCITY) {
     note_in += OCTAVE[i];
-    note_in &= UPPER_LIMIT;
+    if (note_in > UPPER_LIMIT) {
+      note_in = UPPER_LIMIT;
+    }
     velocity_in += ADD_VELOCITY;
-    velocity_in &= UPPER_LIMIT;
+    if (velocity_in > UPPER_LIMIT) {
+      velocity_in = UPPER_LIMIT;
+    }
 
     if (DEBUG > 0) {
-      Serial.println("Note on");
-      Serial.println(i);
-      Serial.println(note_in);
-      Serial.println(velocity_in);
+      Serial.println("\n");
+      Serial.print("Note on: ");
+      Serial.print(note_in);
+      Serial.print(", ");
+      Serial.print(velocity_in);
     }
     sendMidiMessage(NOTE_ON | MIDI_CH[i], note_in, velocity_in);
     note_on[i] = note_in;
   }
+}
 
-  if (velocity_in <= 8 && note_on[i] > 0) {
+void noteOff(int i) {
+  if (note_on[i] > 0) {
     if (DEBUG > 0) {
-      Serial.println("Note off");
-      Serial.println(i);
-      Serial.println(note_on[i]);
-      Serial.println(velocity_in);
+      Serial.println("\n");
+      Serial.print("Note off: ");
+      Serial.print(note_on[i]);
     }
-    sendMidiMessage(NOTE_OFF | MIDI_CH[i], note_on[i], velocity_in);
+    sendMidiMessage(NOTE_OFF | MIDI_CH[i], note_on[i], 0);
     note_on[i] = 0;
   }
 }
