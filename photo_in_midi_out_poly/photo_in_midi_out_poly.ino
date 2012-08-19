@@ -5,7 +5,7 @@
 #include "midi_helpers.h"
 
 // Adjust analog in readings
-#define REDUCE_NOISE 0xFFF8
+#define REDUCE_NOISE 0xFFF0
 
 // Analog in numbers
 #define IN_BOTTOM_LEFT 0
