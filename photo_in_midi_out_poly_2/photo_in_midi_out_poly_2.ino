@@ -8,17 +8,17 @@
 #define REDUCE_NOISE 0xFFF0
 
 // Analog in numbers
-#define IN_BOTTOM_LEFT 0
-#define IN_TOP_LEFT 1
-#define IN_BOTTOM_RIGHT 2
-#define IN_TOP_RIGHT 3
+#define IN_TOP_RIGHT 0
+#define IN_BOTTOM_LEFT 1
+#define IN_TOP_LEFT 2
+#define IN_BOTTOM_RIGHT 3
 
 // Number of inputs
 #define NUM_INPUTS 4
 
 // Runtime constants
 const int ADJUST[NUM_INPUTS] = {0, 0, 0, 0};
-const int REDUCE[NUM_INPUTS] = {1, 1, 1, 1};
+const int REDUCE[NUM_INPUTS] = {0, 0, 0, 0};
 const int ADD[NUM_INPUTS] = {0, 0, 0, 0};
 const int INPUTS[NUM_INPUTS] = {A0, A1, A2, A3};
 
@@ -35,10 +35,10 @@ int values[NUM_INPUTS];
 const int notes[NUM_INPUTS] = {0x3C, 0x3D, 0x3E, 0x3F};
 
 const String labels[NUM_INPUTS] = {
+  "TOP_RIGHT",
   "BOTTOM_LEFT",
   "TOP_LEFT",
-  "BOTTOM_RIGHT",
-  "TOP_RIGHT"
+  "BOTTOM_RIGHT"
 };
 
 // Setup routine
@@ -61,16 +61,16 @@ void loop() {
     in[i] = (((in_raw[i] & REDUCE_NOISE) + ADD[i]) << ADJUST[i] >> REDUCE[i]);
     if (DEBUG > 0) {
       // Print
-//      Serial.print(labels[i]);
-//      Serial.print(" ");
-//      Serial.print(in[i]);
-//      Serial.print(" ");
+      Serial.print(labels[i]);
+      Serial.print(" ");
+      Serial.print(in[i]);
+      Serial.print(" ");
     }
   }
-
   if (DEBUG > 0) {
     Serial.println("\n");
   }
+
   /*
     - We have 4 photo sensors that go like this:
     * *
@@ -78,20 +78,20 @@ void loop() {
   */
   
   // Play
-  for (int i = 0; i < NUM_SYNTHS; i++) {
-    // No input
-    // Or hand moved
-    // Silence
-    if (in[i] == 0) {
-      noteOff(i);
-    }
-
-    // Some input
-    if (in[i] > 0) {
-      // Play new note
-      noteOn(i, notes[i], 127);
-    } 
-  } 
+//  for (int i = 0; i < NUM_SYNTHS; i++) {
+//    // No input
+//    // Or hand moved
+//    // Silence
+//    if (in[i] == 0) {
+//      noteOff(i);
+//    }
+//
+//    // Some input
+//    if (in[i] > 0) {
+//      // Play new note
+//      noteOn(i, notes[i], 127);
+//    } 
+//  } 
   
   // Wait
   delay(LOOP_DELAY);
