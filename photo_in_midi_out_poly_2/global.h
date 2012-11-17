@@ -4,7 +4,7 @@
 // GLobal constants
 #define DEBUG 1
 // Number if MIDI synths
-#define NUM_SYNTHS 4
+#define NUM_SYNTHS 1
 
 
 #endif
